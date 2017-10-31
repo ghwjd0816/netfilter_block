@@ -73,7 +73,7 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,
 				if(strncmp(blockhost, host, strlen(blockhost)))break;
 				
 				printf("[+]Blocking...%s\n",blockhost);
-				dump(payload,len);
+				//dump(payload,len);
 				return nfq_set_verdict(qh, id, NF_DROP, 0, NULL);
 			}
 		}
