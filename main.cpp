@@ -30,27 +30,35 @@ void usage()
 	printf("[-]usage : ./netfilter_block www.domain.com\n");
 }
 
+void dump(char*buf, int len)
+{
+	for(int i=0;i<len;i++)
+	{
+		printf("%c",*buf++);
+	}
+}
+
 static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,
 							struct nfq_data *nfa, void *data)
 {
 	u_int32_t id = 0;
 	struct nfqnl_msg_packet_hdr *ph;
 	u_int32_t ret;
-	unsigned char* payload = 0;
+	unsigned char* pl = 0;
 	struct libnet_ipv4_hdr*ip_hdr = 0;
 	struct libnet_tcp_hdr*tcp_hdr = 0;
 
 	ph = nfq_get_msg_packet_hdr(nfa);
 	if(ph) id = ntohl(ph->packet_id);
 
-	ret = nfq_get_payload(nfa, &payload);
+	ret = nfq_get_payload(nfa, &pl);
 	if(ret < 0) return nfq_set_verdict(qh,id,NF_ACCEPT,0,NULL);
 	
-	ip_hdr = (struct libnet_ipv4_hdr*)payload;
+	ip_hdr = (struct libnet_ipv4_hdr*)pl;
 	if(ip_hdr->ip_p == IPP_TCP && ret >= SIZE_OF_IPV4 + SIZE_OF_TCP )
 	{
-		tcp_hdr = (struct libnet_tcp_hdr*)(ip_hdr + SIZE_OF_IPV4);
-		char *payload = (char*)(tcp_hdr+SIZE_OF_TCP);
+		tcp_hdr = (struct libnet_tcp_hdr*)((char*)ip_hdr + SIZE_OF_IPV4);
+		char *payload = (char*)((char*)tcp_hdr+SIZE_OF_TCP);
 		u_int32_t len = ret - SIZE_OF_IPV4 - SIZE_OF_TCP;
 		
 		for(int i=0;i<NUM_OF_METHOD;i++)
@@ -59,19 +67,17 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,
 			{
 				char *host;
 				char * tmp = strstr(payload, "Host: ");
-				if(!tmp)break;
-				
+				if(!tmp)break;	
 				tmp+=6;
 				host = strtok(tmp, "\r");
 				if(strncmp(blockhost, host, strlen(blockhost)))break;
 				
-				printf("[+]Blocking...%s",blockhost);
+				printf("[+]Blocking...%s\n",blockhost);
+				dump(payload,len);
 				return nfq_set_verdict(qh, id, NF_DROP, 0, NULL);
 			}
 		}
 	}
-
-	printf("[*]Entering callback\n");
 	return nfq_set_verdict(qh, id, NF_ACCEPT, 0, NULL);
 }
 
@@ -133,7 +139,7 @@ int main(int argc, char *argv[])
 	{
 		if((rv = recv(fd, buf, sizeof(buf),0)) >=0 )
 		{
-			printf("[+]Packet received\n");
+			//printf("[+]Packet received\n");
 			nfq_handle_packet(handle, buf, rv);
 			continue;
 		}
