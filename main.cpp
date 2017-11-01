@@ -8,10 +8,6 @@
 #include<errno.h>
 
 #include<libnetfilter_queue/libnetfilter_queue.h>
-#define bool int
-#include<libnetfilter_queue/pktbuff.h>
-#undef bool
-#include<libnetfilter_queue/libnetfilter_queue_tcp.h>
 
 #define SIZE_OF_IPV4 20
 #define SIZE_OF_TCP 20
@@ -27,7 +23,10 @@ int http_method_size[NUM_OF_METHOD] = {3,4,4,3,6,7};
 
 void usage()
 {
-	printf("[-]usage : ./netfilter_block www.domain.com\n");
+	printf("[*]iptables -F\n");
+	printf("[*]iptables -A OUTPUT -j NFQUEUE --queue-num 0\n");
+	printf("[*]iptables -A INPUT -j NFQUEUE --queue-num 0\n");
+	printf("[*]usage : ./netfilter_block www.domain.com\n");
 }
 
 void dump(char*buf, int len)
